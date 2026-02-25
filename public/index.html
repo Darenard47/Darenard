@@ -111,6 +111,16 @@
       white-space: pre-wrap;
     }
 
+    .message.darenard .content strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .message.darenard .content em {
+      color: var(--text);
+      font-style: italic;
+    }
+
     .message.user {
       padding: 0.8rem 1rem;
       background: var(--user-bg);
@@ -305,6 +315,30 @@
 
 let conversationHistory = [];
 let isStreaming = false;
+let streamCounter = 0;
+
+// ═══════════════════════════════════════════════
+// MARKDOWN RENDERER (basic)
+// ═══════════════════════════════════════════════
+
+function renderMarkdown(text) {
+  // Escape HTML first
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Bold: **text**
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Italic: *text* (but not inside bold)
+  html = html.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+  // Em dash cleanup
+  html = html.replace(/ — /g, ' — ');
+  // Line breaks
+  html = html.replace(/\n/g, '<br>');
+
+  return html;
+}
 
 // ═══════════════════════════════════════════════
 // UI HELPERS
@@ -319,25 +353,48 @@ const $sendBtn = document.getElementById('sendBtn');
 function addMessage(role, text) {
   const div = document.createElement('div');
   div.className = `message ${role}`;
-  div.innerHTML = `
-    <div class="label">${role === 'darenard' ? 'Darenard' : 'Vous'}</div>
-    <div class="content">${escapeHtml(text)}</div>
-  `;
+
+  const label = document.createElement('div');
+  label.className = 'label';
+  label.textContent = role === 'darenard' ? 'Darenard' : 'Vous';
+
+  const content = document.createElement('div');
+  content.className = 'content';
+  if (role === 'darenard') {
+    content.innerHTML = renderMarkdown(text);
+  } else {
+    content.textContent = text;
+  }
+
+  div.appendChild(label);
+  div.appendChild(content);
   $messages.appendChild(div);
   scrollToBottom();
   return div;
 }
 
 function addStreamingMessage() {
+  streamCounter++;
+  const uid = 'stream-' + streamCounter;
+
   const div = document.createElement('div');
   div.className = 'message darenard';
-  div.innerHTML = `
-    <div class="label">Darenard</div>
-    <div class="content" id="streaming"></div>
-  `;
+
+  const label = document.createElement('div');
+  label.className = 'label';
+  label.textContent = 'Darenard';
+
+  const content = document.createElement('div');
+  content.className = 'content';
+  content.id = uid;
+
+  div.appendChild(label);
+  div.appendChild(content);
   $messages.appendChild(div);
   scrollToBottom();
-  return document.getElementById('streaming');
+
+  // Return the content element directly — no getElementById
+  return content;
 }
 
 function addTypingIndicator() {
@@ -356,12 +413,6 @@ function removeTypingIndicator() {
 
 function scrollToBottom() {
   $messages.scrollTop = $messages.scrollHeight;
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 function autoResize() {
@@ -442,6 +493,7 @@ async function sendToAPI(userText) {
             const parsed = JSON.parse(data);
             if (parsed.text) {
               fullText += parsed.text;
+              // During streaming: show raw text (fast)
               streamEl.textContent = fullText;
               scrollToBottom();
             }
@@ -449,6 +501,10 @@ async function sendToAPI(userText) {
         }
       }
     }
+
+    // After streaming: render markdown
+    streamEl.innerHTML = renderMarkdown(fullText);
+    scrollToBottom();
 
     conversationHistory.push({ role: 'assistant', content: fullText });
 
