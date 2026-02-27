@@ -258,6 +258,130 @@
       cursor: not-allowed;
     }
 
+    /* ─── EXPORT BUTTON ─── */
+    .export-btn {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 0.5rem 0.8rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 100;
+      display: none;
+      border-radius: 3px;
+    }
+
+    .export-btn:hover {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .export-btn.visible { display: block; }
+
+    .export-btn.exporting {
+      pointer-events: none;
+      opacity: 0.4;
+    }
+
+    /* ─── PDF RENDER (hidden, used for capture) ─── */
+    .pdf-render {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      width: 600px;
+      background: #fff;
+      color: #1a1a1a;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 13px;
+      line-height: 1.8;
+      padding: 50px 55px;
+    }
+
+    .pdf-render .pdf-header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .pdf-render .pdf-header h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      font-size: 22px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #1a1a1a;
+      margin-bottom: 4px;
+    }
+
+    .pdf-render .pdf-header .pdf-subtitle {
+      font-style: italic;
+      font-size: 11px;
+      color: #888;
+      letter-spacing: 0.05em;
+    }
+
+    .pdf-render .pdf-header .pdf-date {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: #aaa;
+      margin-top: 8px;
+      letter-spacing: 0.05em;
+    }
+
+    .pdf-render .pdf-msg {
+      margin-bottom: 20px;
+      page-break-inside: avoid;
+    }
+
+    .pdf-render .pdf-msg .pdf-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      margin-bottom: 4px;
+    }
+
+    .pdf-render .pdf-msg.pdf-darenard .pdf-label {
+      color: #8a7a5a;
+    }
+
+    .pdf-render .pdf-msg.pdf-user .pdf-label {
+      color: #888;
+    }
+
+    .pdf-render .pdf-msg.pdf-user {
+      padding: 10px 14px;
+      background: #f5f4f0;
+      border-left: 2px solid #c4a872;
+      border-radius: 0 3px 3px 0;
+    }
+
+    .pdf-render .pdf-msg.pdf-darenard .pdf-content {
+      color: #1a1a1a;
+    }
+
+    .pdf-render .pdf-msg.pdf-user .pdf-content {
+      color: #444;
+      font-size: 12px;
+    }
+
+    .pdf-render .pdf-footer {
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid #ccc;
+      text-align: center;
+      font-size: 8px;
+      color: #bbb;
+      letter-spacing: 0.1em;
+    }
+
     /* ─── FOOTER ─── */
     footer {
       text-align: center;
@@ -275,10 +399,12 @@
       header h1 { font-size: 1.4rem; }
       .messages { padding: 1rem; }
       .input-area { padding: 0.8rem 1rem; }
+      .export-btn { top: 0.6rem; right: 0.6rem; font-size: 0.5rem; padding: 0.4rem 0.6rem; }
     }
   </style>
 </head>
 <body>
+  <button class="export-btn" id="exportBtn" onclick="exportPDF()" title="Exporter en PDF">⤓ PDF</button>
   <div class="container">
     <header>
       <h1>Darenard</h1>
@@ -308,6 +434,7 @@
     <footer>style athéïde — exposition numérique</footer>
   </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════
 // STATE
@@ -430,6 +557,7 @@ async function begin() {
   $welcome.style.display = 'none';
   $messages.style.display = 'block';
   $inputArea.classList.add('visible');
+  document.getElementById('exportBtn').classList.add('visible');
 
   // Tour 1: Darenard's opening
   await sendToAPI("Bonjour Darenard.");
@@ -517,6 +645,93 @@ async function sendToAPI(userText) {
   isStreaming = false;
   $sendBtn.disabled = false;
   $userInput.focus();
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT PDF
+// ═══════════════════════════════════════════════
+
+async function exportPDF() {
+  const btn = document.getElementById('exportBtn');
+  btn.classList.add('exporting');
+  btn.textContent = '⏳ Export…';
+
+  // Build clean HTML for the PDF
+  const container = document.createElement('div');
+  container.className = 'pdf-render';
+
+  // Header
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  const header = document.createElement('div');
+  header.className = 'pdf-header';
+  header.innerHTML =
+    '<h1>Darenard</h1>' +
+    '<div class="pdf-subtitle">semi-prophète de la non-religion athéïde</div>' +
+    '<div class="pdf-date">' + dateStr + ' — ' + timeStr + '</div>';
+  container.appendChild(header);
+
+  // Messages — skip the auto-trigger "Bonjour Darenard."
+  let skipFirst = true;
+  for (const msg of conversationHistory) {
+    if (skipFirst && msg.role === 'user') {
+      skipFirst = false;
+      continue;
+    }
+
+    const isDarenard = msg.role === 'assistant';
+    const div = document.createElement('div');
+    div.className = 'pdf-msg ' + (isDarenard ? 'pdf-darenard' : 'pdf-user');
+
+    const label = document.createElement('div');
+    label.className = 'pdf-label';
+    label.textContent = isDarenard ? 'Darenard' : 'Vous';
+
+    const content = document.createElement('div');
+    content.className = 'pdf-content';
+    if (isDarenard) {
+      content.innerHTML = renderMarkdown(msg.content);
+    } else {
+      content.textContent = msg.content;
+    }
+
+    div.appendChild(label);
+    div.appendChild(content);
+    container.appendChild(div);
+  }
+
+  // Footer
+  const footer = document.createElement('div');
+  footer.className = 'pdf-footer';
+  footer.textContent = 'style athéïde — exposition numérique';
+  container.appendChild(footer);
+
+  // Append offscreen for rendering
+  document.body.appendChild(container);
+
+  const filename = 'Darenard_' + now.toISOString().slice(0, 10) + '.pdf';
+
+  try {
+    await html2pdf()
+      .set({
+        margin: [10, 0, 10, 0],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      })
+      .from(container)
+      .save();
+  } catch (err) {
+    console.error('PDF export error:', err);
+  }
+
+  document.body.removeChild(container);
+  btn.classList.remove('exporting');
+  btn.textContent = '\u2913 PDF';
 }
 </script>
 </body>
