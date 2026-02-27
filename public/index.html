@@ -263,9 +263,9 @@
       position: fixed;
       top: 1rem;
       right: 1rem;
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--text-dim);
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      color: #0a0a0a;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.55rem;
       letter-spacing: 0.12em;
@@ -276,8 +276,9 @@
       z-index: 100;
       display: none;
       border-radius: 3px;
+      font-weight: bold;
     }
-    .export-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+    .export-btn:hover { background: var(--accent-dim); border-color: var(--accent-dim); }
     .export-btn.visible { display: block; }
 
     /* ─── FOOTER ─── */
