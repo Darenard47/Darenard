@@ -583,23 +583,23 @@ function exportPDF() {
     + '<title>Conversation avec Darenard</title>'
     + '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">'
     + '<style>'
-    + '*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }'
-    + 'body { font-family: Cormorant Garamond, Georgia, serif; font-size: 13px; line-height: 1.8; color: #1a1a1a; padding: 30px 35px; max-width: 100%; margin: 0 auto; word-wrap: break-word; overflow-wrap: break-word; }'
+    + 'body { margin: 0; padding: 0; font-family: Cormorant Garamond, Georgia, serif; font-size: 13px; line-height: 1.8; color: #1a1a1a; word-wrap: break-word; overflow-wrap: break-word; }'
+    + '.wrap { padding: 45px 50px; max-width: 650px; margin: 0 auto; }'
     + '.header { text-align: center; margin-bottom: 25px; padding-bottom: 18px; border-bottom: 1px solid #ccc; }'
-    + '.header h1 { font-weight: 300; font-size: 22px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 3px; }'
+    + '.header h1 { font-weight: 300; font-size: 22px; letter-spacing: 0.15em; text-transform: uppercase; margin: 0 0 3px 0; }'
     + '.header .sub { font-style: italic; font-size: 11px; color: #888; letter-spacing: 0.05em; }'
     + '.header .date { font-family: monospace; font-size: 9px; color: #aaa; margin-top: 6px; }'
-    + '.msg { margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid; max-width: 100%; overflow: hidden; }'
+    + '.msg { margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid; }'
     + '.msg .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 3px; }'
     + '.msg.darenard .label { color: #8a7a5a; }'
-    + '.msg.darenard .content { color: #1a1a1a; font-size: 13px; word-wrap: break-word; overflow-wrap: break-word; }'
+    + '.msg.darenard .content { color: #1a1a1a; font-size: 13px; }'
     + '.msg.darenard .content strong { color: #6b5d3e; font-weight: 600; }'
     + '.msg.user { padding: 8px 12px; background: #f5f4f0; border-left: 2px solid #c4a872; border-radius: 0 3px 3px 0; }'
     + '.msg.user .label { color: #999; }'
-    + '.msg.user .content { color: #444; font-size: 12px; word-wrap: break-word; overflow-wrap: break-word; }'
+    + '.msg.user .content { color: #444; font-size: 12px; }'
     + '.footer { margin-top: 25px; padding-top: 12px; border-top: 1px solid #ccc; text-align: center; font-size: 8px; color: #bbb; letter-spacing: 0.1em; }'
-    + '@page { size: A4; margin: 20mm; } @media print { body { padding: 15px 20px; } }'
-    + '</style></head><body>'
+    + '@media print { .wrap { padding: 10px 15px; max-width: 100%; } }'
+    + '</style></head><body><div class="wrap">'
     + '<div class="header">'
     + '<h1>Darenard</h1>'
     + '<div class="sub">semi-proph\u00e8te de la non-religion ath\u00e9\u00efde</div>'
@@ -607,7 +607,7 @@ function exportPDF() {
     + '</div>'
     + msgsHTML
     + '<div class="footer">style ath\u00e9\u00efde \u2014 exposition num\u00e9rique</div>'
-    + '</body></html>';
+    + '</div></body></html>';
 
   var w = window.open('', '_blank');
   w.document.write(html);
