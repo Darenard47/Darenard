@@ -292,9 +292,6 @@
 
     /* ─── PDF RENDER (hidden, used for capture) ─── */
     .pdf-render {
-      position: absolute;
-      left: -9999px;
-      top: 0;
       width: 600px;
       background: #fff;
       color: #1a1a1a;
@@ -339,6 +336,7 @@
     .pdf-render .pdf-msg {
       margin-bottom: 20px;
       page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .pdf-render .pdf-msg .pdf-label {
@@ -708,18 +706,37 @@ async function exportPDF() {
   footer.textContent = 'style athéïde — exposition numérique';
   container.appendChild(footer);
 
-  // Append offscreen for rendering
+  // Append for rendering — must be in-flow for html2canvas to capture full height
   document.body.appendChild(container);
+  container.style.position = 'absolute';
+  container.style.top = '0';
+  container.style.left = '0';
+  container.style.zIndex = '99999';
+  container.style.overflow = 'visible';
+  container.style.height = 'auto';
+  container.style.minHeight = 'auto';
+  container.style.maxHeight = 'none';
+
+  // Scroll to top so html2canvas starts from the right place
+  window.scrollTo(0, 0);
 
   const filename = 'Darenard_' + now.toISOString().slice(0, 10) + '.pdf';
 
   try {
     await html2pdf()
       .set({
-        margin: [10, 0, 10, 0],
+        margin: [15, 10, 15, 10],
         filename: filename,
         image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          scrollY: 0,
+          scrollX: 0,
+          windowWidth: 600,
+          height: container.scrollHeight,
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
       })
@@ -730,6 +747,8 @@ async function exportPDF() {
   }
 
   document.body.removeChild(container);
+  // Restore scroll in chat
+  scrollToBottom();
   btn.classList.remove('exporting');
   btn.textContent = '\u2913 PDF';
 }
