@@ -277,108 +277,9 @@
       display: none;
       border-radius: 3px;
     }
-
-    .export-btn:hover {
-      border-color: var(--accent-dim);
-      color: var(--accent);
-    }
-
+    .export-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
     .export-btn.visible { display: block; }
-
-    .export-btn.exporting {
-      pointer-events: none;
-      opacity: 0.4;
-    }
-
-    /* ─── PDF RENDER (hidden, used for capture) ─── */
-    .pdf-render {
-      width: 600px;
-      background: #fff;
-      color: #1a1a1a;
-      font-family: 'Cormorant Garamond', Georgia, serif;
-      font-size: 13px;
-      line-height: 1.8;
-      padding: 50px 55px;
-    }
-
-    .pdf-render .pdf-header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid #ccc;
-    }
-
-    .pdf-render .pdf-header h1 {
-      font-family: 'Cormorant Garamond', serif;
-      font-weight: 300;
-      font-size: 22px;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: #1a1a1a;
-      margin-bottom: 4px;
-    }
-
-    .pdf-render .pdf-header .pdf-subtitle {
-      font-style: italic;
-      font-size: 11px;
-      color: #888;
-      letter-spacing: 0.05em;
-    }
-
-    .pdf-render .pdf-header .pdf-date {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 9px;
-      color: #aaa;
-      margin-top: 8px;
-      letter-spacing: 0.05em;
-    }
-
-    .pdf-render .pdf-msg {
-      margin-bottom: 20px;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-
-    .pdf-render .pdf-msg .pdf-label {
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      margin-bottom: 4px;
-    }
-
-    .pdf-render .pdf-msg.pdf-darenard .pdf-label {
-      color: #8a7a5a;
-    }
-
-    .pdf-render .pdf-msg.pdf-user .pdf-label {
-      color: #888;
-    }
-
-    .pdf-render .pdf-msg.pdf-user {
-      padding: 10px 14px;
-      background: #f5f4f0;
-      border-left: 2px solid #c4a872;
-      border-radius: 0 3px 3px 0;
-    }
-
-    .pdf-render .pdf-msg.pdf-darenard .pdf-content {
-      color: #1a1a1a;
-    }
-
-    .pdf-render .pdf-msg.pdf-user .pdf-content {
-      color: #444;
-      font-size: 12px;
-    }
-
-    .pdf-render .pdf-footer {
-      margin-top: 30px;
-      padding-top: 15px;
-      border-top: 1px solid #ccc;
-      text-align: center;
-      font-size: 8px;
-      color: #bbb;
-      letter-spacing: 0.1em;
-    }
+    .export-btn.exporting { pointer-events: none; opacity: 0.4; }
 
     /* ─── FOOTER ─── */
     footer {
@@ -432,7 +333,7 @@
     <footer>style athéïde — exposition numérique</footer>
   </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════
 // STATE
@@ -646,33 +547,74 @@ async function sendToAPI(userText) {
 }
 
 // ═══════════════════════════════════════════════
-// EXPORT PDF
+// EXPORT PDF (jsPDF — text-based, no screenshots)
 // ═══════════════════════════════════════════════
 
-async function exportPDF() {
+function exportPDF() {
   const btn = document.getElementById('exportBtn');
   btn.classList.add('exporting');
   btn.textContent = '⏳ Export…';
 
-  // Build clean HTML for the PDF
-  const container = document.createElement('div');
-  container.className = 'pdf-render';
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
-  // Header
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const marginL = 25;
+  const marginR = 25;
+  const marginTop = 30;
+  const marginBot = 25;
+  const usableW = pageW - marginL - marginR;
+  let y = marginTop;
+
+  function checkPage(needed) {
+    if (y + needed > pageH - marginBot) {
+      doc.addPage();
+      y = marginTop;
+    }
+  }
+
+  function drawFooter() {
+    const total = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(180);
+      doc.text('style athéïde — exposition numérique', pageW / 2, pageH - 10, { align: 'center' });
+      doc.text(i + ' / ' + total, pageW - marginR, pageH - 10, { align: 'right' });
+    }
+  }
+
+  // ── Header ──
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(20);
+  doc.setTextColor(30);
+  doc.text('DARENARD', pageW / 2, y, { align: 'center' });
+  y += 7;
+
+  doc.setFontSize(9);
+  doc.setTextColor(140);
+  doc.text('semi-prophète de la non-religion athéïde', pageW / 2, y, { align: 'center' });
+  y += 6;
+
   const now = new Date();
   const dateStr = now.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
-  const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  doc.setFontSize(7);
+  doc.setTextColor(170);
+  doc.text(dateStr, pageW / 2, y, { align: 'center' });
+  y += 4;
 
-  const header = document.createElement('div');
-  header.className = 'pdf-header';
-  header.innerHTML =
-    '<h1>Darenard</h1>' +
-    '<div class="pdf-subtitle">semi-prophète de la non-religion athéïde</div>' +
-    '<div class="pdf-date">' + dateStr + ' — ' + timeStr + '</div>';
-  container.appendChild(header);
+  // Line
+  doc.setDrawColor(200);
+  doc.setLineWidth(0.3);
+  doc.line(marginL, y, pageW - marginR, y);
+  y += 10;
 
-  // Messages — skip the auto-trigger "Bonjour Darenard."
+  // ── Messages ──
+  // Skip the auto-trigger "Bonjour Darenard."
   let skipFirst = true;
+
   for (const msg of conversationHistory) {
     if (skipFirst && msg.role === 'user') {
       skipFirst = false;
@@ -680,75 +622,65 @@ async function exportPDF() {
     }
 
     const isDarenard = msg.role === 'assistant';
-    const div = document.createElement('div');
-    div.className = 'pdf-msg ' + (isDarenard ? 'pdf-darenard' : 'pdf-user');
+    // Strip markdown for PDF
+    const rawText = msg.content
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1');
 
-    const label = document.createElement('div');
-    label.className = 'pdf-label';
-    label.textContent = isDarenard ? 'Darenard' : 'Vous';
+    // Label
+    checkPage(15);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(isDarenard ? 138 : 140, isDarenard ? 122 : 140, isDarenard ? 90 : 140);
+    doc.text(isDarenard ? 'DARENARD' : 'VOUS', marginL + (isDarenard ? 0 : 4), y);
+    y += 4;
 
-    const content = document.createElement('div');
-    content.className = 'pdf-content';
-    if (isDarenard) {
-      content.innerHTML = renderMarkdown(msg.content);
+    // User messages: draw background + left border
+    if (!isDarenard) {
+      const lines = doc.splitTextToSize(rawText, usableW - 8);
+      const blockH = lines.length * 4.5 + 4;
+      checkPage(blockH);
+      doc.setFillColor(245, 244, 240);
+      doc.setDrawColor(196, 168, 114);
+      doc.setLineWidth(0.5);
+      doc.rect(marginL, y - 2, usableW, blockH, 'F');
+      doc.line(marginL, y - 2, marginL, y - 2 + blockH);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(80);
+      for (const line of lines) {
+        checkPage(5);
+        doc.text(line, marginL + 4, y + 2);
+        y += 4.5;
+      }
+      y += 4;
     } else {
-      content.textContent = msg.content;
+      // Darenard messages
+      const lines = doc.splitTextToSize(rawText, usableW);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(30);
+      for (const line of lines) {
+        checkPage(5);
+        doc.text(line, marginL, y + 2);
+        y += 4.8;
+      }
+      y += 4;
     }
 
-    div.appendChild(label);
-    div.appendChild(content);
-    container.appendChild(div);
+    // Separator
+    checkPage(6);
+    y += 2;
   }
 
-  // Footer
-  const footer = document.createElement('div');
-  footer.className = 'pdf-footer';
-  footer.textContent = 'style athéïde — exposition numérique';
-  container.appendChild(footer);
+  // ── Footers on all pages ──
+  drawFooter();
 
-  // Append for rendering — must be in-flow for html2canvas to capture full height
-  document.body.appendChild(container);
-  container.style.position = 'absolute';
-  container.style.top = '0';
-  container.style.left = '0';
-  container.style.zIndex = '99999';
-  container.style.overflow = 'visible';
-  container.style.height = 'auto';
-  container.style.minHeight = 'auto';
-  container.style.maxHeight = 'none';
-
-  // Scroll to top so html2canvas starts from the right place
-  window.scrollTo(0, 0);
-
+  // ── Save ──
   const filename = 'Darenard_' + now.toISOString().slice(0, 10) + '.pdf';
+  doc.save(filename);
 
-  try {
-    await html2pdf()
-      .set({
-        margin: [15, 10, 15, 10],
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          scrollY: 0,
-          scrollX: 0,
-          windowWidth: 600,
-          height: container.scrollHeight,
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-      })
-      .from(container)
-      .save();
-  } catch (err) {
-    console.error('PDF export error:', err);
-  }
-
-  document.body.removeChild(container);
-  // Restore scroll in chat
-  scrollToBottom();
   btn.classList.remove('exporting');
   btn.textContent = '\u2913 PDF';
 }
