@@ -279,7 +279,6 @@
     }
     .export-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
     .export-btn.visible { display: block; }
-    .export-btn.exporting { pointer-events: none; opacity: 0.4; }
 
     /* ─── FOOTER ─── */
     footer {
@@ -298,12 +297,12 @@
       header h1 { font-size: 1.4rem; }
       .messages { padding: 1rem; }
       .input-area { padding: 0.8rem 1rem; }
-      .export-btn { top: 0.6rem; right: 0.6rem; font-size: 0.5rem; padding: 0.4rem 0.6rem; }
+      .export-btn { top: 0.6rem; right: 0.6rem; }
     }
   </style>
 </head>
 <body>
-  <button class="export-btn" id="exportBtn" onclick="exportPDF()" title="Exporter en PDF">⤓ PDF</button>
+  <button class="export-btn" id="exportBtn" onclick="exportPDF()">&#x2913; PDF</button>
   <div class="container">
     <header>
       <h1>Darenard</h1>
@@ -333,7 +332,6 @@
     <footer>style athéïde — exposition numérique</footer>
   </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════
 // STATE
@@ -547,142 +545,75 @@ async function sendToAPI(userText) {
 }
 
 // ═══════════════════════════════════════════════
-// EXPORT PDF (jsPDF — text-based, no screenshots)
+// EXPORT PDF — window.print() (native, zero deps)
 // ═══════════════════════════════════════════════
 
 function exportPDF() {
-  const btn = document.getElementById('exportBtn');
-  btn.classList.add('exporting');
-  btn.textContent = '⏳ Export…';
+  var now = new Date();
+  var dateStr = now.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+  var timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  const marginL = 25;
-  const marginR = 25;
-  const marginTop = 30;
-  const marginBot = 25;
-  const usableW = pageW - marginL - marginR;
-  let y = marginTop;
-
-  function checkPage(needed) {
-    if (y + needed > pageH - marginBot) {
-      doc.addPage();
-      y = marginTop;
-    }
-  }
-
-  function drawFooter() {
-    const total = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= total; i++) {
-      doc.setPage(i);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(180);
-      doc.text('style athéïde — exposition numérique', pageW / 2, pageH - 10, { align: 'center' });
-      doc.text(i + ' / ' + total, pageW - marginR, pageH - 10, { align: 'right' });
-    }
-  }
-
-  // ── Header ──
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(20);
-  doc.setTextColor(30);
-  doc.text('DARENARD', pageW / 2, y, { align: 'center' });
-  y += 7;
-
-  doc.setFontSize(9);
-  doc.setTextColor(140);
-  doc.text('semi-prophète de la non-religion athéïde', pageW / 2, y, { align: 'center' });
-  y += 6;
-
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
-  doc.setFontSize(7);
-  doc.setTextColor(170);
-  doc.text(dateStr, pageW / 2, y, { align: 'center' });
-  y += 4;
-
-  // Line
-  doc.setDrawColor(200);
-  doc.setLineWidth(0.3);
-  doc.line(marginL, y, pageW - marginR, y);
-  y += 10;
-
-  // ── Messages ──
-  // Skip the auto-trigger "Bonjour Darenard."
-  let skipFirst = true;
-
-  for (const msg of conversationHistory) {
+  // Build messages HTML — skip auto-trigger "Bonjour Darenard."
+  var msgsHTML = '';
+  var skipFirst = true;
+  for (var i = 0; i < conversationHistory.length; i++) {
+    var msg = conversationHistory[i];
     if (skipFirst && msg.role === 'user') {
       skipFirst = false;
       continue;
     }
-
-    const isDarenard = msg.role === 'assistant';
-    // Strip markdown for PDF
-    const rawText = msg.content
-      .replace(/\*\*(.+?)\*\*/g, '$1')
-      .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1');
-
-    // Label
-    checkPage(15);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(isDarenard ? 138 : 140, isDarenard ? 122 : 140, isDarenard ? 90 : 140);
-    doc.text(isDarenard ? 'DARENARD' : 'VOUS', marginL + (isDarenard ? 0 : 4), y);
-    y += 4;
-
-    // User messages: draw background + left border
-    if (!isDarenard) {
-      const lines = doc.splitTextToSize(rawText, usableW - 8);
-      const blockH = lines.length * 4.5 + 4;
-      checkPage(blockH);
-      doc.setFillColor(245, 244, 240);
-      doc.setDrawColor(196, 168, 114);
-      doc.setLineWidth(0.5);
-      doc.rect(marginL, y - 2, usableW, blockH, 'F');
-      doc.line(marginL, y - 2, marginL, y - 2 + blockH);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9.5);
-      doc.setTextColor(80);
-      for (const line of lines) {
-        checkPage(5);
-        doc.text(line, marginL + 4, y + 2);
-        y += 4.5;
-      }
-      y += 4;
-    } else {
-      // Darenard messages
-      const lines = doc.splitTextToSize(rawText, usableW);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(30);
-      for (const line of lines) {
-        checkPage(5);
-        doc.text(line, marginL, y + 2);
-        y += 4.8;
-      }
-      y += 4;
+    var isDarenard = msg.role === 'assistant';
+    var label = isDarenard ? 'Darenard' : 'Vous';
+    var cls = isDarenard ? 'darenard' : 'user';
+    var text = msg.content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+    if (isDarenard) {
+      text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     }
-
-    // Separator
-    checkPage(6);
-    y += 2;
+    msgsHTML += '<div class="msg ' + cls + '">'
+      + '<div class="label">' + label + '</div>'
+      + '<div class="content">' + text + '</div>'
+      + '</div>';
   }
 
-  // ── Footers on all pages ──
-  drawFooter();
+  var html = '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">'
+    + '<title>Conversation avec Darenard</title>'
+    + '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">'
+    + '<style>'
+    + '*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }'
+    + 'body { font-family: Cormorant Garamond, Georgia, serif; font-size: 13px; line-height: 1.8; color: #1a1a1a; padding: 40px 50px; max-width: 700px; margin: 0 auto; }'
+    + '.header { text-align: center; margin-bottom: 25px; padding-bottom: 18px; border-bottom: 1px solid #ccc; }'
+    + '.header h1 { font-weight: 300; font-size: 22px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 3px; }'
+    + '.header .sub { font-style: italic; font-size: 11px; color: #888; letter-spacing: 0.05em; }'
+    + '.header .date { font-family: monospace; font-size: 9px; color: #aaa; margin-top: 6px; }'
+    + '.msg { margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid; }'
+    + '.msg .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 3px; }'
+    + '.msg.darenard .label { color: #8a7a5a; }'
+    + '.msg.darenard .content { color: #1a1a1a; font-size: 13px; }'
+    + '.msg.darenard .content strong { color: #6b5d3e; font-weight: 600; }'
+    + '.msg.user { padding: 8px 12px; background: #f5f4f0; border-left: 2px solid #c4a872; border-radius: 0 3px 3px 0; }'
+    + '.msg.user .label { color: #999; }'
+    + '.msg.user .content { color: #444; font-size: 12px; }'
+    + '.footer { margin-top: 25px; padding-top: 12px; border-top: 1px solid #ccc; text-align: center; font-size: 8px; color: #bbb; letter-spacing: 0.1em; }'
+    + '@media print { body { padding: 20px 30px; } }'
+    + '</style></head><body>'
+    + '<div class="header">'
+    + '<h1>Darenard</h1>'
+    + '<div class="sub">semi-proph\u00e8te de la non-religion ath\u00e9\u00efde</div>'
+    + '<div class="date">' + dateStr + ' \u2014 ' + timeStr + '</div>'
+    + '</div>'
+    + msgsHTML
+    + '<div class="footer">style ath\u00e9\u00efde \u2014 exposition num\u00e9rique</div>'
+    + '</body></html>';
 
-  // ── Save ──
-  const filename = 'Darenard_' + now.toISOString().slice(0, 10) + '.pdf';
-  doc.save(filename);
-
-  btn.classList.remove('exporting');
-  btn.textContent = '\u2913 PDF';
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  // Wait for fonts to load before printing
+  setTimeout(function() { w.print(); }, 800);
 }
 </script>
 </body>
