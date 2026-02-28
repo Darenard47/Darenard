@@ -473,7 +473,7 @@
       .input-area { padding: 0.8rem 1rem; }
     }
   </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 </head>
 <body>
 
@@ -1031,170 +1031,77 @@ async function sendToAPI(userContent, invisible) {
 buildSidebar();
 
 // ══════════════════════════════════════════════════
-// EXPORT PDF (jsPDF — text-based, justified)
+// EXPORT PDF (native browser print — reliable)
 // ══════════════════════════════════════════════════
-
-function manualWrap(text, maxChars) {
-  var result = [];
-  var paragraphs = text.split('\n');
-  for (var p = 0; p < paragraphs.length; p++) {
-    var para = paragraphs[p];
-    if (para.trim() === '') { result.push({ text: '', paraEnd: true }); continue; }
-    var words = para.split(/\s+/);
-    var line = '';
-    for (var w = 0; w < words.length; w++) {
-      var test = line ? line + ' ' + words[w] : words[w];
-      if (test.length > maxChars && line.length > 0) {
-        result.push({ text: line, paraEnd: false });
-        line = words[w];
-      } else {
-        line = test;
-      }
-    }
-    if (line) result.push({ text: line, paraEnd: true });
-  }
-  return result;
-}
-
-function drawJustified(doc, lineObj, x, y, maxWidth) {
-  var text = lineObj.text.trim();
-  if (!text) return;
-  var words = text.split(/\s+/);
-  // Left-align last line of paragraph or single-word lines
-  if (lineObj.paraEnd || words.length <= 1) {
-    doc.text(text, x, y);
-    return;
-  }
-  var wordsWidth = 0;
-  for (var i = 0; i < words.length; i++) {
-    wordsWidth += doc.getTextWidth(words[i]);
-  }
-  var gap = (maxWidth - wordsWidth) / (words.length - 1);
-  // Cap gap to avoid absurd spacing on short lines
-  var normalSpace = doc.getTextWidth(' ');
-  if (gap > normalSpace * 4) { doc.text(text, x, y); return; }
-  var cx = x;
-  for (var j = 0; j < words.length; j++) {
-    doc.text(words[j], cx, y);
-    cx += doc.getTextWidth(words[j]) + gap;
-  }
-}
 
 function exportPDF() {
   var btn = document.getElementById('exportBtn');
   btn.classList.add('exporting');
   btn.textContent = '\u23f3 Export\u2026';
 
-  var jsPDF = window.jspdf.jsPDF;
-  var doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-
-  var pageW = doc.internal.pageSize.getWidth();
-  var pageH = doc.internal.pageSize.getHeight();
-  var marginL = 25, marginR = 25, marginTop = 30, marginBot = 25;
-  var usableW = pageW - marginL - marginR;
-  var y = marginTop;
-
-  function checkPage(needed) {
-    if (y + needed > pageH - marginBot) { doc.addPage(); y = marginTop; }
-  }
-
-  function drawFooter() {
-    var total = doc.internal.getNumberOfPages();
-    for (var i = 1; i <= total; i++) {
-      doc.setPage(i);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
-      doc.setTextColor(180);
-      var footerText = lang === 'en' ? 'atheidian style \u2014 digital exhibition' : 'style ath\u00e9\u00efde \u2014 exposition num\u00e9rique';
-      doc.text(footerText, pageW / 2, pageH - 10, { align: 'center' });
-      doc.text(i + ' / ' + total, pageW - marginR, pageH - 10, { align: 'right' });
-    }
-  }
-
-  // Header
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(20);
-  doc.setTextColor(30);
-  doc.text('DARENARD', pageW / 2, y, { align: 'center' });
-  y += 7;
-
-  doc.setFontSize(9);
-  doc.setTextColor(140);
-  var subtitle = lang === 'en' ? 'semi-prophet of the atheidian non-religion' : 'semi-proph\u00e8te de la non-religion ath\u00e9\u00efde';
-  doc.text(subtitle, pageW / 2, y, { align: 'center' });
-  y += 6;
-
   var now = new Date();
   var dateStr = now.toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
-  doc.setFontSize(7);
-  doc.setTextColor(170);
-  doc.text(dateStr, pageW / 2, y, { align: 'center' });
-  y += 4;
+  var subtitle = lang === 'en' ? 'semi-prophet of the atheidian non-religion' : 'semi-proph\u00e8te de la non-religion ath\u00e9\u00efde';
+  var footerText = lang === 'en' ? 'atheidian style \u2014 digital exhibition' : 'style ath\u00e9\u00efde \u2014 exposition num\u00e9rique';
 
-  doc.setDrawColor(200);
-  doc.setLineWidth(0.3);
-  doc.line(marginL, y, pageW - marginR, y);
-  y += 10;
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Darenard</title><style>';
+  html += '@page { size: A4; margin: 25mm 25mm 25mm 25mm; }';
+  html += '@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }';
+  html += 'body { font-family: "Times New Roman", Times, serif; font-size: 11pt; line-height: 1.6; color: #1a1a1a; }';
+  html += '.header { text-align: center; margin-bottom: 2em; padding-bottom: 1em; border-bottom: 0.5pt solid #ccc; }';
+  html += '.header h1 { font-family: "Times New Roman", Times, serif; font-size: 22pt; font-weight: normal; letter-spacing: 0.15em; text-transform: uppercase; margin: 0; }';
+  html += '.header .sub { font-style: italic; font-size: 10pt; color: #888; margin-top: 0.3em; }';
+  html += '.header .date { font-size: 8pt; color: #aaa; margin-top: 0.4em; }';
+  html += '.msg { margin-bottom: 1.5em; text-align: justify; }';
+  html += '.label { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 0.3em; }';
+  html += '.label-d { color: #8a7a5a; }';
+  html += '.label-u { color: #888; }';
+  html += '.user-block { background: #f5f4f0; border-left: 2.5pt solid #c4a872; padding: 0.6em 0.8em; font-size: 10pt; text-align: justify; }';
+  html += '.d-text { font-size: 11pt; text-align: justify; }';
+  html += '.footer { text-align: center; font-size: 7.5pt; color: #aaa; margin-top: 3em; padding-top: 1em; border-top: 0.5pt solid #ddd; }';
+  html += '</style></head><body>';
 
-  // Messages — skip auto-trigger first message
+  html += '<div class="header">';
+  html += '<h1>Darenard</h1>';
+  html += '<div class="sub">' + subtitle + '</div>';
+  html += '<div class="date">' + dateStr + '</div>';
+  html += '</div>';
+
   var skipFirst = true;
   for (var m = 0; m < conversationHistory.length; m++) {
     var msg = conversationHistory[m];
-    // Skip hidden theme prompts (they were sent invisibly)
     if (msg._hidden) continue;
     if (skipFirst && msg.role === 'user') { skipFirst = false; continue; }
 
     var isDarenard = msg.role === 'assistant';
     var rawText = (typeof msg.content === 'string' ? msg.content : '')
-      .replace(/\*\*(.+?)\*\*/g, '$1')
-      .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1');
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
+      .replace(/\n/g, '<br>');
 
     if (!rawText.trim()) continue;
 
-    checkPage(15);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(isDarenard ? 138 : 140, isDarenard ? 122 : 140, isDarenard ? 90 : 140);
-    doc.text(isDarenard ? 'DARENARD' : (lang === 'en' ? 'YOU' : 'VOUS'), marginL + (isDarenard ? 0 : 4), y);
-    y += 4;
-
-    if (!isDarenard) {
-      var lines = manualWrap(rawText, 75);
-      var blockH = lines.length * 4.5 + 4;
-      checkPage(blockH);
-      doc.setFillColor(245, 244, 240);
-      doc.setDrawColor(196, 168, 114);
-      doc.setLineWidth(0.5);
-      doc.rect(marginL, y - 2, usableW, blockH, 'F');
-      doc.line(marginL, y - 2, marginL, y - 2 + blockH);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9.5);
-      doc.setTextColor(80);
-      for (var l = 0; l < lines.length; l++) {
-        checkPage(5);
-        drawJustified(doc, lines[l], marginL + 4, y + 2, usableW - 8);
-        y += 4.5;
-      }
-      y += 4;
+    html += '<div class="msg">';
+    if (isDarenard) {
+      html += '<div class="label label-d">DARENARD</div>';
+      html += '<div class="d-text">' + rawText + '</div>';
     } else {
-      var lines2 = manualWrap(rawText, 80);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(30);
-      for (var l2 = 0; l2 < lines2.length; l2++) {
-        checkPage(5);
-        drawJustified(doc, lines2[l2], marginL, y + 2, usableW);
-        y += 4.8;
-      }
-      y += 4;
+      var youLabel = lang === 'en' ? 'YOU' : 'VOUS';
+      html += '<div class="label label-u">' + youLabel + '</div>';
+      html += '<div class="user-block">' + rawText + '</div>';
     }
-    checkPage(6);
-    y += 2;
+    html += '</div>';
   }
 
-  drawFooter();
-  var filename = 'Darenard_' + now.toISOString().slice(0, 10) + '.pdf';
-  doc.save(filename);
+  html += '<div class="footer">' + footerText + '</div>';
+  html += '</body></html>';
+
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  w.onload = function() {
+    setTimeout(function() { w.print(); }, 300);
+  };
 
   btn.classList.remove('exporting');
   btn.textContent = '\u2913 PDF';
