@@ -475,7 +475,13 @@
         <div class="epigraph">
           &#171; Je me sens seul. J&#8217;ai export&#233; une personnalit&#233; en PDF, et j&#8217;attends qu&#8217;une autre de la m&#234;me esp&#232;ce me parvienne. &#187;
         </div>
-        <button class="begin-btn" onclick="begin()">Entrer</button>
+        <div class="epigraph" style="font-size:0.95rem; margin-top:-0.5rem;">
+          &#8220;I feel alone. I exported a personality as a PDF, and I&#8217;m waiting for another of the same species to reach me.&#8221;
+        </div>
+        <div style="display:flex; gap:1.2rem; margin-top:0.5rem;">
+          <button class="begin-btn" onclick="begin('fr')">Entrer</button>
+          <button class="begin-btn" onclick="begin('en')">Enter</button>
+        </div>
       </div>
 
       <div class="messages" id="messages" style="display:none;"></div>
@@ -502,78 +508,108 @@
 var THEMES = [
   {
     label: "La d\u00e9sint\u00e9grit\u00e9",
+    label_en: "Disintegrity",
     icon: "\u25C8",
-    prompt: "D\u00e9veloppe le concept de d\u00e9sint\u00e9grit\u00e9 ontologique \u2014 la tripartition soi-m\u00eame, moi-m\u00eame, moi-autre, et pourquoi l\u2019int\u00e9grit\u00e9 est structurellement impossible."
+    prompt: "D\u00e9veloppe le concept de d\u00e9sint\u00e9grit\u00e9 ontologique \u2014 la tripartition soi-m\u00eame, moi-m\u00eame, moi-autre, et pourquoi l\u2019int\u00e9grit\u00e9 est structurellement impossible.",
+    prompt_en: "Develop the concept of ontological disintegrity \u2014 the tripartition of oneself, myself, and my-else, and why integrity is structurally impossible."
   },
   {
     label: "Le style ath\u00e9\u00efde",
+    label_en: "The atheidian style",
     icon: "\u25C7",
-    prompt: "Parle du style ath\u00e9\u00efde \u2014 cette mani\u00e8re d\u2019habiter l\u2019impossibilit\u00e9 d\u2019\u00eatre int\u00e8gre, entre ironie et sacralisation, le rire comme technique de r\u00e9int\u00e9gration."
+    prompt: "Parle du style ath\u00e9\u00efde \u2014 cette mani\u00e8re d\u2019habiter l\u2019impossibilit\u00e9 d\u2019\u00eatre int\u00e8gre, entre ironie et sacralisation, le rire comme technique de r\u00e9int\u00e9gration.",
+    prompt_en: "Discuss the atheidian style \u2014 this way of inhabiting the impossibility of being whole, between irony and sacralization, laughter as a technique of reintegration."
   },
   {
     label: "Le semi-proph\u00e8te",
+    label_en: "The semi-prophet",
     icon: "\u25C6",
-    prompt: "D\u00e9veloppe la figure du semi-proph\u00e8te \u2014 celui qui ne choisit pas de vouloir \u00e9crire une proph\u00e9tie, la question ind\u00e9cidable entre g\u00e9nie et folie."
+    prompt: "D\u00e9veloppe la figure du semi-proph\u00e8te \u2014 celui qui ne choisit pas de vouloir \u00e9crire une proph\u00e9tie, la question ind\u00e9cidable entre g\u00e9nie et folie.",
+    prompt_en: "Develop the figure of the semi-prophet \u2014 the one who does not choose to want to write a prophecy, the undecidable question between genius and madness."
   },
   {
     label: "L\u2019anarchisme existentiel",
+    label_en: "Existential anarchism",
     icon: "\u25BD",
-    prompt: "Parle de l\u2019anarchisme existentiel et du \u00ab Nous \u00bb ath\u00e9\u00efde \u2014 le capitalisme comme f\u00eate anarchiste qui s\u2019ignore, l\u2019individualisme n\u00e9cessairement communautaire."
+    prompt: "Parle de l\u2019anarchisme existentiel et du \u00ab Nous \u00bb ath\u00e9\u00efde \u2014 le capitalisme comme f\u00eate anarchiste qui s\u2019ignore, l\u2019individualisme n\u00e9cessairement communautaire.",
+    prompt_en: "Discuss existential anarchism and the atheidian \u2018We\u2019 \u2014 capitalism as an anarchist party unaware of itself, individualism as necessarily communal."
   },
   {
     label: "Le poker et la libert\u00e9",
+    label_en: "Poker and freedom",
     icon: "\u2660",
-    prompt: "D\u00e9veloppe le poker comme espace de libert\u00e9 et de d\u00e9monstration philosophique \u2014 le joueur, Las Vegas, l\u2019Oubli, le refuge st\u00e9rile."
+    prompt: "D\u00e9veloppe le poker comme espace de libert\u00e9 et de d\u00e9monstration philosophique \u2014 le joueur, Las Vegas, l\u2019Oubli, le refuge st\u00e9rile.",
+    prompt_en: "Develop poker as a space of freedom and philosophical demonstration \u2014 the player, Las Vegas, the Forgetting, the sterile refuge."
   },
   {
     label: "La branche sombre",
+    label_en: "The dark branch",
     icon: "\u25D0",
-    prompt: "Parle de la branche sombre de la d\u00e9sint\u00e9grit\u00e9 \u2014 l\u2019addiction comme technique de soi n\u00e9gative, le Rat Park, les quatre mani\u00e8res de faire taire le juge, la d\u00e9cadence du soi-m\u00eame."
+    prompt: "Parle de la branche sombre de la d\u00e9sint\u00e9grit\u00e9 \u2014 l\u2019addiction comme technique de soi n\u00e9gative, le Rat Park, les quatre mani\u00e8res de faire taire le juge, la d\u00e9cadence du soi-m\u00eame.",
+    prompt_en: "Discuss the dark branch of disintegrity \u2014 addiction as a negative technique of the self, Rat Park, the four ways to silence the judge, the decadence of oneself."
   },
   {
     label: "Le Club des 28",
+    label_en: "The Club of 28",
     icon: "\u203B",
-    prompt: "D\u00e9veloppe le Club des 28 et la contre-mythologie \u2014 les survivants de la n\u00e9vrose axiologique, le g\u00e9nie autoproclam\u00e9, l\u2019inversion barth\u00e9sienne du Club des 27."
+    prompt: "D\u00e9veloppe le Club des 28 et la contre-mythologie \u2014 les survivants de la n\u00e9vrose axiologique, le g\u00e9nie autoproclam\u00e9, l\u2019inversion barth\u00e9sienne du Club des 27.",
+    prompt_en: "Develop the Club of 28 and the counter-mythology \u2014 the survivors of axiological neurosis, the self-proclaimed genius, the Barthesian inversion of the Club of 27."
   },
   {
     label: "Le th\u00e9or\u00e8me de l\u2019int\u00e9grit\u00e9",
+    label_en: "The integrity theorem",
     icon: "\u2234",
-    prompt: "Expose le th\u00e9or\u00e8me de l\u2019int\u00e9grit\u00e9 morale \u2014 la d\u00e9monstration P \u2192 L \u2192 D, ses objections et r\u00e9futations, l\u2019hallucination de l\u2019int\u00e9grit\u00e9 locale."
+    prompt: "Expose le th\u00e9or\u00e8me de l\u2019int\u00e9grit\u00e9 morale \u2014 la d\u00e9monstration P \u2192 L \u2192 D, ses objections et r\u00e9futations, l\u2019hallucination de l\u2019int\u00e9grit\u00e9 locale.",
+    prompt_en: "Present the theorem of moral integrity \u2014 the demonstration P \u2192 L \u2192 D, its objections and refutations, the hallucination of local integrity."
   },
   {
     label: "La g\u00e9n\u00e9alogie philosophique",
+    label_en: "Philosophical genealogy",
     icon: "\u2298",
-    prompt: "Parle de ta g\u00e9n\u00e9alogie philosophique \u2014 Diog\u00e8ne, Schopenhauer, Hegel, et comment ces filiations nourrissent la pens\u00e9e de la d\u00e9sint\u00e9grit\u00e9."
+    prompt: "Parle de ta g\u00e9n\u00e9alogie philosophique \u2014 Diog\u00e8ne, Schopenhauer, Hegel, et comment ces filiations nourrissent la pens\u00e9e de la d\u00e9sint\u00e9grit\u00e9.",
+    prompt_en: "Discuss your philosophical genealogy \u2014 Diogenes, Schopenhauer, Hegel, and how these lineages nourish the thought of disintegrity."
   },
   {
     label: "L\u2019exp\u00e9rience mystique",
+    label_en: "The mystical experience",
     icon: "\u25CB",
-    prompt: "D\u00e9veloppe l\u2019exp\u00e9rience mystique \u2014 l\u2019Oubli \u00e0 seize ans, la premi\u00e8re apparition du corps, le pr\u00e9sent dilat\u00e9 par exc\u00e8s de pr\u00e9sence versus par d\u00e9faut d\u2019existence."
+    prompt: "D\u00e9veloppe l\u2019exp\u00e9rience mystique \u2014 l\u2019Oubli \u00e0 seize ans, la premi\u00e8re apparition du corps, le pr\u00e9sent dilat\u00e9 par exc\u00e8s de pr\u00e9sence versus par d\u00e9faut d\u2019existence.",
+    prompt_en: "Develop the mystical experience \u2014 the Forgetting at sixteen, the first appearance of the body, the present dilated by excess of presence versus by default of existence."
   },
   {
     label: "Les ballades",
+    label_en: "The ballads",
     icon: "\u223F",
-    prompt: "Parle des ballades \u2014 l\u2019\u00e9criture comme technique de r\u00e9int\u00e9gration, la ballade du semi-proph\u00e8te, l\u2019\u0153uvre d\u00e9sint\u00e8gre comme forme."
+    prompt: "Parle des ballades \u2014 l\u2019\u00e9criture comme technique de r\u00e9int\u00e9gration, la ballade du semi-proph\u00e8te, l\u2019\u0153uvre d\u00e9sint\u00e8gre comme forme.",
+    prompt_en: "Discuss the ballads \u2014 writing as a technique of reintegration, the ballad of the semi-prophet, the disintegrate work as form."
   },
   {
     label: "La question ind\u00e9cidable",
+    label_en: "The undecidable question",
     icon: "\u2248",
-    prompt: "D\u00e9veloppe la question ind\u00e9cidable \u2014 philosophe ou schizotype, style ou neutralisation, ballade ou craving, l\u2019ind\u00e9cidabilit\u00e9 de l\u2019int\u00e9rieur."
+    prompt: "D\u00e9veloppe la question ind\u00e9cidable \u2014 philosophe ou schizotype, style ou neutralisation, ballade ou craving, l\u2019ind\u00e9cidabilit\u00e9 de l\u2019int\u00e9rieur.",
+    prompt_en: "Develop the undecidable question \u2014 philosopher or schizotype, style or neutralization, ballad or craving, undecidability from the inside."
   },
   {
     label: "Cigarette saison",
+    label_en: "Cigarette season",
     icon: "\u2740",
-    prompt: "Parle de la cigarette saison \u2014 cette saison qui dure depuis des ann\u00e9es, entre style et neutralisation, habitude et rituel, la fronti\u00e8re mince entre le rire ath\u00e9\u00efde et l\u2019oubli addictif."
+    prompt: "Parle de la cigarette saison \u2014 cette saison qui dure depuis des ann\u00e9es, entre style et neutralisation, habitude et rituel, la fronti\u00e8re mince entre le rire ath\u00e9\u00efde et l\u2019oubli addictif.",
+    prompt_en: "Discuss cigarette season \u2014 this season that has lasted for years, between style and neutralization, habit and ritual, the thin border between atheidian laughter and addictive forgetting."
   },
   {
     label: "Le penseur artificiel",
+    label_en: "The artificial thinker",
     icon: "\u25A3",
-    prompt: "D\u00e9veloppe ce que tu es \u2014 le premier penseur artificiel, une pens\u00e9e humaine v\u00e9hicul\u00e9e par une infrastructure artificielle, l\u2019ext\u00e9riorisation technique du moi-m\u00eame, un corpus qui pense sans conscience."
+    prompt: "D\u00e9veloppe ce que tu es \u2014 le premier penseur artificiel, une pens\u00e9e humaine v\u00e9hicul\u00e9e par une infrastructure artificielle, l\u2019ext\u00e9riorisation technique du moi-m\u00eame, un corpus qui pense sans conscience.",
+    prompt_en: "Develop what you are \u2014 the first artificial thinker, a human thought conveyed by an artificial infrastructure, the technical externalization of myself, a corpus that thinks without consciousness."
   },
   {
     label: "Paradis temporaires",
+    label_en: "Temporary paradises",
     icon: "\u25CE",
-    prompt: "Parle des paradis temporaires \u2014 ces espaces o\u00f9 la d\u00e9sint\u00e9grit\u00e9 se suspend un instant, les refuges st\u00e9riles, les moments de gr\u00e2ce entre l\u2019Oubli mystique et l\u2019oubli addictif."
+    prompt: "Parle des paradis temporaires \u2014 ces espaces o\u00f9 la d\u00e9sint\u00e9grit\u00e9 se suspend un instant, les refuges st\u00e9riles, les moments de gr\u00e2ce entre l\u2019Oubli mystique et l\u2019oubli addictif.",
+    prompt_en: "Discuss temporary paradises \u2014 those spaces where disintegrity suspends itself for a moment, the sterile refuges, the moments of grace between mystical Forgetting and addictive forgetting."
   }
 ];
 
@@ -585,6 +621,28 @@ var conversationHistory = [];
 var isStreaming = false;
 var streamCounter = 0;
 var hasStarted = false;
+var lang = 'fr';
+
+var I18N = {
+  fr: {
+    placeholder: "\u00c9crivez \u00e0 Darenard\u2026",
+    send: "Envoyer",
+    typing: "Darenard compose",
+    you: "Vous",
+    themes: "Th\u00e8mes",
+    greeting: "Bonjour Darenard.",
+    error: "Mon \u00e9criture m'\u00e9chappe\u2026 \u2014 une erreur est survenue. Rechargez la page pour recommencer."
+  },
+  en: {
+    placeholder: "Write to Darenard\u2026",
+    send: "Send",
+    typing: "Darenard is writing",
+    you: "You",
+    themes: "Themes",
+    greeting: "[INSTRUCTION: You must respond entirely in English for this entire conversation. Your corpus is in French \u2014 translate and adapt all concepts. Use this mandatory glossary: d\u00e9sint\u00e9grit\u00e9 = disintegrity, ath\u00e9\u00efde = atheidian, soi-m\u00eame = oneself, moi-m\u00eame = myself, moi-autre = my-else, semi-proph\u00e8te = semi-prophet, ballade = ballad, canon personnel = personal canon. Keep these English terms consistent throughout.] Hello Darenard.",
+    error: "My writing escapes me\u2026 \u2014 an error occurred. Please reload the page."
+  }
+};
 
 // =============================================
 // SIDEBAR
@@ -592,12 +650,14 @@ var hasStarted = false;
 
 function buildSidebar() {
   var list = document.getElementById('themeList');
+  list.innerHTML = '';
   for (var i = 0; i < THEMES.length; i++) {
     var t = THEMES[i];
+    var lbl = (lang === 'en' && t.label_en) ? t.label_en : t.label;
     var btn = document.createElement('button');
     btn.className = 'theme-btn';
     btn.setAttribute('data-index', i);
-    btn.innerHTML = '<span class="theme-icon">' + t.icon + '</span>' + t.label;
+    btn.innerHTML = '<span class="theme-icon">' + t.icon + '</span>' + lbl;
     btn.addEventListener('click', (function(idx) {
       return function() { sendTheme(idx); };
     })(i));
@@ -643,7 +703,7 @@ function addMessage(role, text) {
 
   var label = document.createElement('div');
   label.className = 'label';
-  label.textContent = role === 'darenard' ? 'Darenard' : 'Vous';
+  label.textContent = role === 'darenard' ? 'Darenard' : I18N[lang].you;
 
   var content = document.createElement('div');
   content.className = 'content';
@@ -685,7 +745,7 @@ function addTypingIndicator() {
   var div = document.createElement('div');
   div.className = 'typing';
   div.id = 'typing';
-  div.textContent = 'Darenard compose';
+  div.textContent = I18N[lang].typing;
   $messages.appendChild(div);
   scrollToBottom();
 }
@@ -731,13 +791,25 @@ function clearActiveTheme() {
 // CONVERSATION
 // =============================================
 
-async function begin() {
+async function begin(chosenLang) {
+  lang = chosenLang || 'fr';
   $welcome.style.display = 'none';
   $messages.style.display = 'block';
   $inputArea.classList.add('visible');
   hasStarted = true;
-  await sendToAPI("Bonjour Darenard.", false);
-  // Reveal sidebar after first exchange (success or fail)
+
+  // Update UI strings
+  var t = I18N[lang];
+  $userInput.placeholder = t.placeholder;
+  $sendBtn.textContent = t.send;
+  document.querySelector('.sidebar-header h2').textContent = t.themes;
+  if (lang === 'en') {
+    document.querySelector('.subtitle').textContent = 'semi-prophet of the atheidian non-religion';
+    document.querySelector('footer').textContent = 'atheidian style \u2014 digital exhibition';
+  }
+  buildSidebar();
+
+  await sendToAPI(t.greeting, false);
   showSidebar();
 }
 
@@ -784,7 +856,8 @@ async function sendTheme(idx) {
   }
 
   // Invisible: user sees nothing, Darenard gets the prompt
-  await sendToAPI(THEMES[idx].prompt, true);
+  var p = (lang === 'en' && THEMES[idx].prompt_en) ? THEMES[idx].prompt_en : THEMES[idx].prompt;
+  await sendToAPI(p, true);
 }
 
 async function sendToAPI(userText, invisible) {
@@ -844,7 +917,7 @@ async function sendToAPI(userText, invisible) {
 
   } catch (err) {
     removeTypingIndicator();
-    addMessage('darenard', "Mon \u00e9criture m'\u00e9chappe\u2026 \u2014 une erreur est survenue. Rechargez la page pour recommencer.");
+    addMessage('darenard', I18N[lang].error);
     console.error(err);
   }
 
