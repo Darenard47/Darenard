@@ -140,6 +140,7 @@
     .message.user .content {
       color: var(--text);
       font-size: 0.95rem;
+      white-space: pre-wrap;
     }
 
     /* ─── TYPING INDICATOR ─── */
@@ -207,7 +208,67 @@
       display: none;
     }
 
-    .input-area.visible { display: flex; gap: 0.8rem; align-items: flex-end; }
+    .input-area.visible { display: flex; gap: 0.8rem; align-items: flex-end; flex-wrap: wrap; }
+
+    .input-row {
+      display: flex;
+      gap: 0.8rem;
+      align-items: flex-end;
+      width: 100%;
+    }
+
+    .attach-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      padding: 0.5rem 0.6rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-radius: 4px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .attach-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+    .file-preview {
+      display: none;
+      width: 100%;
+      padding: 0.4rem 0.7rem;
+      background: var(--bg-subtle);
+      border: 1px solid var(--accent-dim);
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .file-preview.visible { display: flex; }
+
+    .file-preview .file-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-preview .file-remove {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.8rem;
+      padding: 0 0.3rem;
+      flex-shrink: 0;
+    }
+
+    .file-preview .file-remove:hover { color: #cc6666; }
 
     .input-area textarea {
       flex: 1;
@@ -321,13 +382,21 @@
     <div class="messages" id="messages" style="display:none;"></div>
 
     <div class="input-area" id="inputArea">
-      <textarea
-        id="userInput"
-        placeholder="Écrivez à Darenard…"
-        rows="1"
-        onkeydown="handleKey(event)"
-      ></textarea>
-      <button id="sendBtn" onclick="send()">Envoyer</button>
+      <div class="file-preview" id="filePreview">
+        <span class="file-name" id="fileName"></span>
+        <button class="file-remove" onclick="removeFile()">&times;</button>
+      </div>
+      <div class="input-row">
+        <button class="attach-btn" onclick="document.getElementById('fileInput').click()" title="Joindre un fichier">&#x1F4CE;</button>
+        <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.txt,.md" style="display:none" onchange="handleFile(this)">
+        <textarea
+          id="userInput"
+          placeholder="Écrivez à Darenard…"
+          rows="1"
+          onkeydown="handleKey(event)"
+        ></textarea>
+        <button id="sendBtn" onclick="send()">Envoyer</button>
+      </div>
     </div>
 
     <footer>style athéïde — exposition numérique</footer>
@@ -341,6 +410,7 @@
 let conversationHistory = [];
 let isStreaming = false;
 let streamCounter = 0;
+let pendingFile = null; // { name, type, data (base64 or text) }
 
 // ═══════════════════════════════════════════════
 // MARKDOWN RENDERER (basic)
@@ -448,6 +518,52 @@ function autoResize() {
 $userInput.addEventListener('input', autoResize);
 
 // ═══════════════════════════════════════════════
+// FILE HANDLING
+// ═══════════════════════════════════════════════
+
+function handleFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+
+  var maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    alert('Fichier trop volumineux (max 10 Mo)');
+    input.value = '';
+    return;
+  }
+
+  var ext = file.name.split('.').pop().toLowerCase();
+  var isText = (ext === 'txt' || ext === 'md');
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    if (isText) {
+      pendingFile = { name: file.name, type: 'text', data: e.target.result };
+    } else {
+      // base64 — strip the data:xxx;base64, prefix
+      var b64 = e.target.result.split(',')[1];
+      var mediaType = file.type || 'application/octet-stream';
+      pendingFile = { name: file.name, type: mediaType, data: b64 };
+    }
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('filePreview').classList.add('visible');
+  };
+
+  if (isText) {
+    reader.readAsText(file);
+  } else {
+    reader.readAsDataURL(file);
+  }
+  input.value = '';
+}
+
+function removeFile() {
+  pendingFile = null;
+  document.getElementById('filePreview').classList.remove('visible');
+  document.getElementById('fileName').textContent = '';
+}
+
+// ═══════════════════════════════════════════════
 // CONVERSATION
 // ═══════════════════════════════════════════════
 
@@ -458,7 +574,7 @@ async function begin() {
   document.getElementById('exportBtn').classList.add('visible');
 
   // Tour 1: Darenard's opening
-  await sendToAPI("Bonjour Darenard.");
+  await sendToAPI("Bonjour Darenard.", null);
 }
 
 function handleKey(e) {
@@ -470,19 +586,57 @@ function handleKey(e) {
 
 async function send() {
   const text = $userInput.value.trim();
-  if (!text || isStreaming) return;
+  if ((!text && !pendingFile) || isStreaming) return;
 
   $userInput.value = '';
   autoResize();
-  addMessage('user', text);
-  await sendToAPI(text);
+
+  var displayText = text || '';
+  if (pendingFile) {
+    displayText = (displayText ? displayText + '\n' : '') + '📎 ' + pendingFile.name;
+  }
+  addMessage('user', displayText);
+
+  var fileToSend = pendingFile;
+  removeFile();
+
+  await sendToAPI(text, fileToSend);
 }
 
-async function sendToAPI(userText) {
+async function sendToAPI(userText, file) {
   isStreaming = true;
   $sendBtn.disabled = true;
 
-  conversationHistory.push({ role: 'user', content: userText });
+  // Build content blocks for this message
+  var content = [];
+
+  if (file) {
+    if (file.type === 'text') {
+      // Text file: include as text
+      content.push({ type: 'text', text: '[Fichier: ' + file.name + ']\n' + file.data });
+    } else if (file.type === 'application/pdf') {
+      content.push({
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: file.data }
+      });
+    } else {
+      // Image
+      content.push({
+        type: 'image',
+        source: { type: 'base64', media_type: file.type, data: file.data }
+      });
+    }
+  }
+
+  if (userText) {
+    content.push({ type: 'text', text: userText });
+  } else if (content.length > 0 && !userText) {
+    content.push({ type: 'text', text: '(fichier joint)' });
+  }
+
+  // If no file, keep simple string format for backward compat
+  var msgContent = file ? content : userText;
+  conversationHistory.push({ role: 'user', content: msgContent });
 
   addTypingIndicator();
 
@@ -566,7 +720,15 @@ function exportPDF() {
     var isDarenard = msg.role === 'assistant';
     var label = isDarenard ? 'Darenard' : 'Vous';
     var cls = isDarenard ? 'darenard' : 'user';
-    var text = msg.content
+    // Extract text from content (can be string or array of blocks)
+    var rawContent = msg.content;
+    if (Array.isArray(rawContent)) {
+      rawContent = rawContent
+        .filter(function(b) { return b.type === 'text'; })
+        .map(function(b) { return b.text; })
+        .join('\n');
+    }
+    var text = rawContent
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
