@@ -4,7 +4,7 @@ var path = require("path");
 var fs = require("fs");
 
 var app = express();
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 var client = new Anthropic();
