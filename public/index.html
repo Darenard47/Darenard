@@ -1031,6 +1031,32 @@ async function sendToAPI(userContent, invisible) {
 buildSidebar();
 
 // ══════════════════════════════════════════════════
+// MANUAL WORD WRAP (bypasses jsPDF broken metrics)
+// ══════════════════════════════════════════════════
+
+function manualWrap(text, maxChars) {
+  var result = [];
+  var paragraphs = text.split('\n');
+  for (var p = 0; p < paragraphs.length; p++) {
+    var para = paragraphs[p];
+    if (para.trim() === '') { result.push(''); continue; }
+    var words = para.split(/\s+/);
+    var line = '';
+    for (var w = 0; w < words.length; w++) {
+      var test = line ? line + ' ' + words[w] : words[w];
+      if (test.length > maxChars && line.length > 0) {
+        result.push(line);
+        line = words[w];
+      } else {
+        line = test;
+      }
+    }
+    if (line) result.push(line);
+  }
+  return result;
+}
+
+// ══════════════════════════════════════════════════
 // EXPORT PDF (jsPDF — text-based)
 // ══════════════════════════════════════════════════
 
@@ -1113,8 +1139,7 @@ function exportPDF() {
     y += 4;
 
     if (!isDarenard) {
-      var safeW = (usableW - 8) * 0.85;
-      var lines = doc.splitTextToSize(rawText, safeW);
+      var lines = manualWrap(rawText, 75);
       var blockH = lines.length * 4.5 + 4;
       checkPage(blockH);
       doc.setFillColor(245, 244, 240);
@@ -1132,8 +1157,7 @@ function exportPDF() {
       }
       y += 4;
     } else {
-      var safeW2 = usableW * 0.85;
-      var lines2 = doc.splitTextToSize(rawText, safeW2);
+      var lines2 = manualWrap(rawText, 80);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(30);
