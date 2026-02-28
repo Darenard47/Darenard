@@ -1113,7 +1113,8 @@ function exportPDF() {
     y += 4;
 
     if (!isDarenard) {
-      var lines = doc.splitTextToSize(rawText, usableW - 8);
+      var safeW = (usableW - 8) * 0.85;
+      var lines = doc.splitTextToSize(rawText, safeW);
       var blockH = lines.length * 4.5 + 4;
       checkPage(blockH);
       doc.setFillColor(245, 244, 240);
@@ -1131,7 +1132,8 @@ function exportPDF() {
       }
       y += 4;
     } else {
-      var lines2 = doc.splitTextToSize(rawText, usableW);
+      var safeW2 = usableW * 0.85;
+      var lines2 = doc.splitTextToSize(rawText, safeW2);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(30);
