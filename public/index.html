@@ -722,7 +722,11 @@ async function begin() {
   $inputArea.classList.add('visible');
   hasStarted = true;
   await sendToAPI("Bonjour Darenard.", false);
-  // Reveal sidebar after first response
+  // Reveal sidebar after first exchange (success or fail)
+  showSidebar();
+}
+
+function showSidebar() {
   document.getElementById('sidebar').classList.add('visible');
   document.getElementById('sidebarToggle').classList.add('visible');
 }
