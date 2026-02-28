@@ -1031,7 +1031,7 @@ async function sendToAPI(userContent, invisible) {
 buildSidebar();
 
 // ══════════════════════════════════════════════════
-// MANUAL WORD WRAP (bypasses jsPDF broken metrics)
+// EXPORT PDF (jsPDF — text-based, justified)
 // ══════════════════════════════════════════════════
 
 function manualWrap(text, maxChars) {
@@ -1039,26 +1039,46 @@ function manualWrap(text, maxChars) {
   var paragraphs = text.split('\n');
   for (var p = 0; p < paragraphs.length; p++) {
     var para = paragraphs[p];
-    if (para.trim() === '') { result.push(''); continue; }
+    if (para.trim() === '') { result.push({ text: '', paraEnd: true }); continue; }
     var words = para.split(/\s+/);
     var line = '';
     for (var w = 0; w < words.length; w++) {
       var test = line ? line + ' ' + words[w] : words[w];
       if (test.length > maxChars && line.length > 0) {
-        result.push(line);
+        result.push({ text: line, paraEnd: false });
         line = words[w];
       } else {
         line = test;
       }
     }
-    if (line) result.push(line);
+    if (line) result.push({ text: line, paraEnd: true });
   }
   return result;
 }
 
-// ══════════════════════════════════════════════════
-// EXPORT PDF (jsPDF — text-based)
-// ══════════════════════════════════════════════════
+function drawJustified(doc, lineObj, x, y, maxWidth) {
+  var text = lineObj.text.trim();
+  if (!text) return;
+  var words = text.split(/\s+/);
+  // Left-align last line of paragraph or single-word lines
+  if (lineObj.paraEnd || words.length <= 1) {
+    doc.text(text, x, y);
+    return;
+  }
+  var wordsWidth = 0;
+  for (var i = 0; i < words.length; i++) {
+    wordsWidth += doc.getTextWidth(words[i]);
+  }
+  var gap = (maxWidth - wordsWidth) / (words.length - 1);
+  // Cap gap to avoid absurd spacing on short lines
+  var normalSpace = doc.getTextWidth(' ');
+  if (gap > normalSpace * 4) { doc.text(text, x, y); return; }
+  var cx = x;
+  for (var j = 0; j < words.length; j++) {
+    doc.text(words[j], cx, y);
+    cx += doc.getTextWidth(words[j]) + gap;
+  }
+}
 
 function exportPDF() {
   var btn = document.getElementById('exportBtn');
@@ -1152,7 +1172,7 @@ function exportPDF() {
       doc.setTextColor(80);
       for (var l = 0; l < lines.length; l++) {
         checkPage(5);
-        doc.text(lines[l], marginL + 4, y + 2);
+        drawJustified(doc, lines[l], marginL + 4, y + 2, usableW - 8);
         y += 4.5;
       }
       y += 4;
@@ -1163,7 +1183,7 @@ function exportPDF() {
       doc.setTextColor(30);
       for (var l2 = 0; l2 < lines2.length; l2++) {
         checkPage(5);
-        doc.text(lines2[l2], marginL, y + 2);
+        drawJustified(doc, lines2[l2], marginL, y + 2, usableW);
         y += 4.8;
       }
       y += 4;
