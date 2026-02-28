@@ -970,7 +970,7 @@ async function sendToAPI(userContent, invisible) {
     var response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: conversationHistory }),
+      body: JSON.stringify({ messages: conversationHistory.map(function(m) { return { role: m.role, content: m.content }; }) }),
     });
 
     removeTypingIndicator();
