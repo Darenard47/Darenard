@@ -400,6 +400,34 @@
       cursor: not-allowed;
     }
 
+    #exportBtn {
+      background: transparent; color: var(--accent-dim); border: 1px solid var(--accent-dim);
+      font-size: 0.75rem; padding: 0.4rem 0.7rem; border-radius: 6px; cursor: pointer;
+      white-space: nowrap; min-width: auto;
+    }
+    #exportBtn:hover { background: rgba(196,168,114,0.15); }
+    #exportBtn.exporting { opacity: 0.5; pointer-events: none; }
+
+    .attach-btn {
+      background: transparent; border: none; cursor: pointer;
+      font-size: 1.2rem; padding: 0.3rem; opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+    .attach-btn:hover { opacity: 1; }
+
+    #filePreview {
+      padding: 0.4rem 1.2rem; font-size: 0.75rem; color: var(--accent-dim);
+    }
+    #filePreview .file-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: rgba(196,168,114,0.12); border: 1px solid var(--accent-dim);
+      border-radius: 4px; padding: 0.25rem 0.6rem; font-size: 0.7rem;
+    }
+    #filePreview .file-badge button {
+      background: none; border: none; cursor: pointer; color: var(--text-dim);
+      font-size: 0.9rem; padding: 0; line-height: 1;
+    }
+
     /* ─── FOOTER ─── */
     footer {
       text-align: center;
@@ -445,6 +473,7 @@
       .input-area { padding: 0.8rem 1rem; }
     }
   </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -479,14 +508,17 @@
           &#8220;I feel alone. I exported a personality as a PDF, and I&#8217;m waiting for another of the same species to reach me.&#8221;
         </div>
         <div style="display:flex; gap:1.2rem; margin-top:0.5rem;">
-          <button class="begin-btn" onclick="begin('fr')">Entrer</button>
-          <button class="begin-btn" onclick="begin('en')">Enter</button>
+          <button class="begin-btn" onclick="begin('fr')">Français</button>
+          <button class="begin-btn" onclick="begin('en')">English</button>
         </div>
       </div>
 
       <div class="messages" id="messages" style="display:none;"></div>
 
+      <div id="filePreview" style="display:none;"></div>
       <div class="input-area" id="inputArea">
+        <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.md,.csv" style="display:none;" onchange="handleFile(this)">
+        <button id="attachBtn" onclick="document.getElementById('fileInput').click()" title="Joindre un fichier" class="attach-btn">&#x1F4CE;</button>
         <textarea
           id="userInput"
           placeholder="&#201;crivez &#224; Darenard&#8230;"
@@ -494,6 +526,7 @@
           onkeydown="handleKey(event)"
         ></textarea>
         <button id="sendBtn" onclick="send()">Envoyer</button>
+        <button id="exportBtn" onclick="exportPDF()" title="Export PDF" style="display:none;">&#x2913; PDF</button>
       </div>
 
       <footer>style ath&#233;&#239;de &#8212; exposition num&#233;rique</footer>
@@ -549,8 +582,8 @@ var THEMES = [
     prompt_en: "Discuss the dark branch of disintegrity \u2014 addiction as a negative technique of the self, Rat Park, the four ways to silence the judge, the decadence of oneself."
   },
   {
-    label: "Le Club des 28",
-    label_en: "The Club of 28",
+    label: "Le Nouveau Club des 28",
+    label_en: "The New 28 Club",
     icon: "\u203B",
     prompt: "D\u00e9veloppe le Club des 28 et la contre-mythologie \u2014 les survivants de la n\u00e9vrose axiologique, le g\u00e9nie autoproclam\u00e9, l\u2019inversion barth\u00e9sienne du Club des 27.",
     prompt_en: "Develop the Club of 28 and the counter-mythology \u2014 the survivors of axiological neurosis, the self-proclaimed genius, the Barthesian inversion of the Club of 27."
@@ -816,6 +849,7 @@ async function begin(chosenLang) {
 function showSidebar() {
   document.getElementById('sidebar').classList.add('visible');
   document.getElementById('sidebarToggle').classList.add('visible');
+  document.getElementById('exportBtn').style.display = '';
 }
 
 function handleKey(e) {
@@ -825,15 +859,79 @@ function handleKey(e) {
   }
 }
 
+// ─── FILE UPLOAD ───
+var pendingFile = null;
+
+function handleFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var preview = document.getElementById('filePreview');
+  var reader = new FileReader();
+
+  if (file.type === 'application/pdf') {
+    reader.onload = function() {
+      pendingFile = { type: 'document', media_type: 'application/pdf', data: reader.result.split(',')[1], name: file.name };
+      showFilePreview(file.name);
+    };
+    reader.readAsDataURL(file);
+  } else if (file.type.startsWith('image/')) {
+    reader.onload = function() {
+      pendingFile = { type: 'image', media_type: file.type, data: reader.result.split(',')[1], name: file.name };
+      showFilePreview(file.name);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    reader.onload = function() {
+      pendingFile = { type: 'text', content: reader.result, name: file.name };
+      showFilePreview(file.name);
+    };
+    reader.readAsText(file);
+  }
+  input.value = '';
+}
+
+function showFilePreview(name) {
+  var preview = document.getElementById('filePreview');
+  preview.style.display = 'block';
+  preview.innerHTML = '<span class="file-badge">\u{1F4CE} ' + name + ' <button onclick="clearFile()">\u2715</button></span>';
+}
+
+function clearFile() {
+  pendingFile = null;
+  var preview = document.getElementById('filePreview');
+  preview.style.display = 'none';
+  preview.innerHTML = '';
+}
+
 async function send() {
   var text = $userInput.value.trim();
-  if (!text || isStreaming) return;
+  if (!text && !pendingFile) return;
+  if (isStreaming) return;
 
   $userInput.value = '';
   autoResize();
-  addMessage('user', text);
+  addMessage('user', text || ('\u{1F4CE} ' + (pendingFile ? pendingFile.name : '')));
   clearActiveTheme();
-  await sendToAPI(text, false);
+
+  // Build content: either string or array of blocks
+  var content;
+  if (pendingFile) {
+    content = [];
+    if (pendingFile.type === 'document') {
+      content.push({ type: 'document', source: { type: 'base64', media_type: pendingFile.media_type, data: pendingFile.data } });
+    } else if (pendingFile.type === 'image') {
+      content.push({ type: 'image', source: { type: 'base64', media_type: pendingFile.media_type, data: pendingFile.data } });
+    } else {
+      content.push({ type: 'text', text: '[Fichier: ' + pendingFile.name + ']\n' + pendingFile.content });
+    }
+    if (text) content.push({ type: 'text', text: text });
+    else content.push({ type: 'text', text: 'Voici un fichier.' });
+    clearFile();
+  } else {
+    content = text;
+  }
+
+  await sendToAPI(content, false);
 }
 
 // Theme click: invisible instruction
@@ -860,11 +958,11 @@ async function sendTheme(idx) {
   await sendToAPI(p, true);
 }
 
-async function sendToAPI(userText, invisible) {
+async function sendToAPI(userContent, invisible) {
   isStreaming = true;
   $sendBtn.disabled = true;
 
-  conversationHistory.push({ role: 'user', content: userText });
+  conversationHistory.push({ role: 'user', content: userContent, _hidden: !!invisible });
 
   addTypingIndicator();
 
@@ -931,6 +1029,130 @@ async function sendToAPI(userText, invisible) {
 // =============================================
 
 buildSidebar();
+
+// ══════════════════════════════════════════════════
+// EXPORT PDF (jsPDF — text-based)
+// ══════════════════════════════════════════════════
+
+function exportPDF() {
+  var btn = document.getElementById('exportBtn');
+  btn.classList.add('exporting');
+  btn.textContent = '\u23f3 Export\u2026';
+
+  var jsPDF = window.jspdf.jsPDF;
+  var doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+  var pageW = doc.internal.pageSize.getWidth();
+  var pageH = doc.internal.pageSize.getHeight();
+  var marginL = 25, marginR = 25, marginTop = 30, marginBot = 25;
+  var usableW = pageW - marginL - marginR;
+  var y = marginTop;
+
+  function checkPage(needed) {
+    if (y + needed > pageH - marginBot) { doc.addPage(); y = marginTop; }
+  }
+
+  function drawFooter() {
+    var total = doc.internal.getNumberOfPages();
+    for (var i = 1; i <= total; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(180);
+      var footerText = lang === 'en' ? 'atheidian style \u2014 digital exhibition' : 'style ath\u00e9\u00efde \u2014 exposition num\u00e9rique';
+      doc.text(footerText, pageW / 2, pageH - 10, { align: 'center' });
+      doc.text(i + ' / ' + total, pageW - marginR, pageH - 10, { align: 'right' });
+    }
+  }
+
+  // Header
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(20);
+  doc.setTextColor(30);
+  doc.text('DARENARD', pageW / 2, y, { align: 'center' });
+  y += 7;
+
+  doc.setFontSize(9);
+  doc.setTextColor(140);
+  var subtitle = lang === 'en' ? 'semi-prophet of the atheidian non-religion' : 'semi-proph\u00e8te de la non-religion ath\u00e9\u00efde';
+  doc.text(subtitle, pageW / 2, y, { align: 'center' });
+  y += 6;
+
+  var now = new Date();
+  var dateStr = now.toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+  doc.setFontSize(7);
+  doc.setTextColor(170);
+  doc.text(dateStr, pageW / 2, y, { align: 'center' });
+  y += 4;
+
+  doc.setDrawColor(200);
+  doc.setLineWidth(0.3);
+  doc.line(marginL, y, pageW - marginR, y);
+  y += 10;
+
+  // Messages — skip auto-trigger first message
+  var skipFirst = true;
+  for (var m = 0; m < conversationHistory.length; m++) {
+    var msg = conversationHistory[m];
+    // Skip hidden theme prompts (they were sent invisibly)
+    if (msg._hidden) continue;
+    if (skipFirst && msg.role === 'user') { skipFirst = false; continue; }
+
+    var isDarenard = msg.role === 'assistant';
+    var rawText = (typeof msg.content === 'string' ? msg.content : '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '$1');
+
+    if (!rawText.trim()) continue;
+
+    checkPage(15);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(isDarenard ? 138 : 140, isDarenard ? 122 : 140, isDarenard ? 90 : 140);
+    doc.text(isDarenard ? 'DARENARD' : (lang === 'en' ? 'YOU' : 'VOUS'), marginL + (isDarenard ? 0 : 4), y);
+    y += 4;
+
+    if (!isDarenard) {
+      var lines = doc.splitTextToSize(rawText, usableW - 8);
+      var blockH = lines.length * 4.5 + 4;
+      checkPage(blockH);
+      doc.setFillColor(245, 244, 240);
+      doc.setDrawColor(196, 168, 114);
+      doc.setLineWidth(0.5);
+      doc.rect(marginL, y - 2, usableW, blockH, 'F');
+      doc.line(marginL, y - 2, marginL, y - 2 + blockH);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(80);
+      for (var l = 0; l < lines.length; l++) {
+        checkPage(5);
+        doc.text(lines[l], marginL + 4, y + 2);
+        y += 4.5;
+      }
+      y += 4;
+    } else {
+      var lines2 = doc.splitTextToSize(rawText, usableW);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(30);
+      for (var l2 = 0; l2 < lines2.length; l2++) {
+        checkPage(5);
+        doc.text(lines2[l2], marginL, y + 2);
+        y += 4.8;
+      }
+      y += 4;
+    }
+    checkPage(6);
+    y += 2;
+  }
+
+  drawFooter();
+  var filename = 'Darenard_' + now.toISOString().slice(0, 10) + '.pdf';
+  doc.save(filename);
+
+  btn.classList.remove('exporting');
+  btn.textContent = '\u2913 PDF';
+}
 </script>
 </body>
 </html>
