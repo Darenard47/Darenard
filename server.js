@@ -32,8 +32,13 @@ var REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 async function redisGet(key) {
   if (!REDIS_URL || !REDIS_TOKEN) return null;
   try {
-    var res = await fetch(REDIS_URL + "/get/" + key, {
-      headers: { Authorization: "Bearer " + REDIS_TOKEN }
+    var res = await fetch(REDIS_URL, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + REDIS_TOKEN,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(["GET", key])
     });
     var data = await res.json();
     if (data.result) return JSON.parse(data.result);
@@ -47,13 +52,13 @@ async function redisGet(key) {
 async function redisSet(key, value) {
   if (!REDIS_URL || !REDIS_TOKEN) return false;
   try {
-    var res = await fetch(REDIS_URL + "/set/" + key, {
+    var res = await fetch(REDIS_URL, {
       method: "POST",
       headers: {
         Authorization: "Bearer " + REDIS_TOKEN,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(JSON.stringify(value))
+      body: JSON.stringify(["SET", key, JSON.stringify(value)])
     });
     var data = await res.json();
     return data.result === "OK";
@@ -205,7 +210,10 @@ app.post("/api/styles", async function(req, res) {
     var pseudo = req.body.pseudo;
     var text = req.body.text;
 
+    console.log("[Styles] POST received — pseudo: " + pseudo + ", text length: " + (text ? text.length : 0));
+
     if (!text || text.length < 20) {
+      console.log("[Styles] Rejected: text too short");
       return res.status(400).json({ error: "text too short" });
     }
     if (text.length > 50000) {
@@ -214,6 +222,7 @@ app.post("/api/styles", async function(req, res) {
 
     var data = await redisGet("darenard:styles");
     if (!data) data = { entries: [] };
+    console.log("[Styles] Current entries: " + data.entries.length);
 
     data.entries.push({
       pseudo: (pseudo || "Second style").substring(0, 60),
@@ -221,7 +230,9 @@ app.post("/api/styles", async function(req, res) {
       date: new Date().toISOString()
     });
 
-    await redisSet("darenard:styles", data);
+    var saved = await redisSet("darenard:styles", data);
+    console.log("[Styles] Redis SET result: " + saved);
+
     res.json({ ok: true });
   } catch (e) {
     console.error("[Styles] Error:", e.message || e);
