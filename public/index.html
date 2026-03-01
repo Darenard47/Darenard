@@ -1509,7 +1509,10 @@ function submitSecondStyle() {
   var pseudo = (document.getElementById('stylePseudo').value || 'Second style').trim();
   var text = (document.getElementById('styleText').value || '').trim();
   if (!text) return;
-  if (text.length < 20) return;
+  if (text.length < 20) {
+    alert(lang === 'en' ? 'Write at least 20 characters.' : '\u00c9crivez au moins 20 caract\u00e8res.');
+    return;
+  }
 
   var btn = document.getElementById('styleSubmitBtn');
   btn.disabled = true;
@@ -1519,7 +1522,10 @@ function submitSecondStyle() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pseudo: pseudo, text: text })
-  }).then(function(r) { return r.json(); }).then(function(data) {
+  }).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(data) {
     if (data && data.ok) {
       document.getElementById('styleModalBody').innerHTML =
         '<div class="submit-confirm">' +
@@ -1531,10 +1537,14 @@ function submitSecondStyle() {
       btn.style.display = 'none';
       loadArchive();
       loadStyleCount();
+    } else {
+      throw new Error(data && data.error || 'unknown');
     }
-  }).catch(function() {
+  }).catch(function(err) {
+    console.error('[SecondStyle] Error:', err);
     btn.disabled = false;
     btn.textContent = lang === 'en' ? 'Send to Darenard' : 'Envoyer \u00e0 Darenard';
+    alert(lang === 'en' ? 'Error — try again.' : 'Erreur \u2014 r\u00e9essayez.');
   });
 }
 
