@@ -953,9 +953,11 @@ async function sendTheme(idx) {
     toggleSidebar();
   }
 
-  // Invisible: user sees nothing, Darenard gets the prompt
+  // Fill textarea with the prompt, let user send manually
   var p = (lang === 'en' && THEMES[idx].prompt_en) ? THEMES[idx].prompt_en : THEMES[idx].prompt;
-  await sendToAPI(p, true);
+  $userInput.value = p;
+  autoResize();
+  $userInput.focus();
 }
 
 async function sendToAPI(userContent, invisible) {
